@@ -4,6 +4,8 @@ An interactive 3D tour of what happens inside a camera lens. You start with a wi
 
 **Live demo: [lens-lab.mrwakecz.workers.dev](https://lens-lab.mrwakecz.workers.dev)**
 
+[![Lens Lab: a 3D camera and lens, the tutorial card, and the simulated photo of a robot at dusk](docs/screenshot.jpg)](https://lens-lab.mrwakecz.workers.dev)
+
 The camera is a generic model with the proportions of the Nikon Z5 II, a full-frame stills camera (no video). It comes with three lenses: a 24–120 mm f/4 zoom, a 50 mm f/1.8 and an 85 mm f/1.8.
 
 ## What makes it different
@@ -91,6 +93,7 @@ src/
   ui/                   tour state machine, tutorial card, controls, hotspots, charts
   chapters/             one module per chapter: steps, text, controls, examples
 tests/                  node:test suites for optics and photo maths
+docs/                   README screenshot
 ```
 
 ## Accuracy and simplifications
