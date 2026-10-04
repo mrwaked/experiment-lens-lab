@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lens Lab — How a camera lens works</title>
+    <meta name="description" content="An interactive 3D tour of how a camera lens works: refraction, focal length, focusing, aperture, depth of field, bokeh, sharpness and flare." />
+    <meta name="theme-color" content="#0a0b0d" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+        }
+      }
+    </script>
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" crossorigin />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js" crossorigin />
+  </head>
+  <body>
+    <canvas id="gl" aria-label="3D view of a camera and lens"></canvas>
+    <div id="labels"></div>
+
+    <header class="topbar">
+      <a class="brand" href="#meet-the-camera" aria-label="Lens Lab home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.5" />
+          <path d="M16 2 L20.5 12.5 M30 16 L19.5 20.5 M16 30 L11.5 19.5 M2 16 L12.5 11.5" stroke="currentColor" stroke-width="1.5" fill="none" />
+          <circle cx="16" cy="16" r="4.2" fill="currentColor" />
+        </svg>
+        <span>Lens<em>Lab</em></span>
+      </a>
+      <span class="topbar-sub">How a camera lens works</span>
+      <div class="topbar-right">
+        <button class="icon-btn" id="reset-view" type="button" title="Reset the camera view (R)">⟲ <span>View</span></button>
+      </div>
+    </header>
+
+    <nav class="rail" aria-label="Chapters">
+      <div class="rail-progress" id="rail-progress"></div>
+      <ol id="chapter-list"></ol>
+    </nav>
+
+    <aside class="card" id="card" aria-live="polite">
+      <div class="card-scroll">
+        <p class="kicker"><span id="card-num">01</span><span class="kicker-sep"></span><span id="card-step"></span></p>
+        <h1 id="card-title"></h1>
+        <div id="card-body" class="prose"></div>
+        <div id="card-readout" class="readout" hidden></div>
+        <div id="card-figure" class="figure" hidden></div>
+        <section id="card-try" class="try" hidden>
+          <h3>Try it</h3>
+          <div class="controls"></div>
+        </section>
+        <section id="card-examples" class="examples" hidden>
+          <h3>Examples <span>click to see them</span></h3>
+          <div class="chips"></div>
+        </section>
+        <details id="card-deep" class="deep" hidden>
+          <summary><span>Deep dive</span><em>the maths behind it</em></summary>
+          <div class="prose"></div>
+        </details>
+      </div>
+      <footer class="card-nav">
+        <button id="prev" class="nav-btn" type="button"><span>←</span> Back</button>
+        <div id="step-dots" class="dots"></div>
+        <button id="next" class="nav-btn primary" type="button">Next <span>→</span></button>
+      </footer>
+    </aside>
+
+    <figure class="viewfinder" id="viewfinder" hidden>
+      <div class="vf-frame" id="vf-frame">
+        <div class="vf-corners"></div>
+        <div class="vf-af" id="vf-af"></div>
+        <div class="vf-top" id="vf-top"></div>
+        <div class="vf-bottom" id="vf-bottom"></div>
+        <div class="vf-shutter" id="vf-shutter"></div>
+        <div class="vf-badge" id="vf-badge"></div>
+      </div>
+      <figcaption>
+        <span class="vf-title"><i></i>Simulated photo</span>
+        <span class="vf-caption" id="vf-caption"></span>
+        <button class="icon-btn" id="vf-size" type="button" title="Enlarge the simulated photo">⤢</button>
+      </figcaption>
+    </figure>
+
+    <div class="popover" id="popover" hidden></div>
+    <div class="toast" id="toast" role="status"></div>
+
+    <div class="loader" id="loader">
+      <div class="loader-iris" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <p>Polishing the glass…</p>
+    </div>
+    <div class="fatal" id="fatal" hidden>
+      <h2>This tour needs WebGL 2</h2>
+      <p id="fatal-msg">Your browser could not start the 3D view. Try a recent Chrome, Safari, Edge or Firefox with hardware acceleration on.</p>
+    </div>
+
+    <script>
+      window.__errors = [];
+      window.addEventListener('error', function (e) {
+        window.__errors.push(String(e.message));
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        window.__errors.push('promise: ' + String(e.reason && e.reason.message));
+      });
+      window.__lensBoot = setTimeout(function () {
+        if (!window.__lensReady) {
+          document.getElementById('fatal-msg').textContent =
+            'The 3D engine did not load. Check your internet connection (Three.js loads from cdn.jsdelivr.net) and reload the page. The page must be served over http(s), for example with `python3 -m http.server`.';
+          document.getElementById('fatal').hidden = false;
+          document.getElementById('loader').classList.add('gone');
+        }
+      }, 20000);
+    </script>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
